@@ -1,41 +1,26 @@
 #!/bin/bash
+# TODO: Change to modular functions
 
 main() {
     set -exuo pipefail  # Strict mode to catch errors
-
-    echo "Inputs specified:"
-    echo "Value of input bam: '$input_bam'"
-    echo "Value of input bai: '$input_bai'"
-    echo "Value of reference fasta: '$reference_fasta'"
-    echo "Value of reference fai: '$reference_fai'"
-    echo "Value of region list: '$region_list'"
-
 
     echo "Downloading input files..."
     dx-download-all-inputs --parallel
 
     # Extract filename and sample name
-    input_bam_name=$(basename "$input_bam_path")  # Get the actual filename
     input_bam_prefix="${input_bam_name%.bam}"  # Remove .bam extension
     sample_name="${input_bam_prefix%%_*}"  # Extract sample prefix
     find ~/in/ -type f -name "*" -print0 | xargs -0 -I {} mv {} /home/dnanexus
 
     echo "Extracted Sample Name: $sample_name"
 
-    if [ -n "$senteion_vcf" ]; then
-        dx download "$senteion_vcf" -o senteion.vcf.gz
-    fi
-
-    if [ -n "$senteion_tbi" ]; then
-        dx download "$senteion_tbi" -o sentieon.tbi
-    fi
-
-    if [ -n "$region_list" ]; then
-        dx download "$region_list" -o regions.txt
-        region_list=$(cat regions.txt)
+    if [[ ! -f "$region_list_name" ]]; then
+    echo "Error: File $region_list_name does not exist!" >&2
+    exit 1
     fi
 
     output_vcfs=()
+    region_list=$(cat "$region_list_name")
     for region in $region_list; do
         echo "Processing region: $region"
         output_vcf="output_${region//:/_}.vcf.gz"
@@ -46,25 +31,39 @@ main() {
         tabix -p vcf "$output_vcf"
         output_vcfs+=("$output_vcf")
     done
-    # merge VCFs if multiple regions
-    final_vcf="${input_bam_prefix}.vcf.gz"
-    if [ ${#output_vcfs[@]} -gt 1 ]; then
-        echo "Merging VCFs..."
-        bcftools concat "${output_vcfs[@]}" -Oz -o "$final_vcf"
-        # Normalise VCF
-        bcftools norm "$final_vcf" -f "$reference_fasta_name" -m -any --keep-sum AD -Oz -o "$final_vcf"
-        tabix -p vcf "$final_vcf"
+
+    # Merge all region VCFs
+    merged_vcf="${input_bam_prefix}_additional.vcf.gz"
+    norm_vcf="${input_bam_prefix}_additional_normalized.vcf.gz"
+    if [ ${#output_vcfs[@]} -gt 0 ]; then
+        if [ ${#output_vcfs[@]} -gt 1 ]; then
+            echo "Merging VCFs..."
+            bcftools concat "${output_vcfs[@]}" -Oz -o "$merged_vcf"
+        else
+            # If only one VCF file, use it as final VCF
+            merged_vcf="${output_vcfs[0]}"
+            # Rename final VCF
+            mv "$merged_vcf" "${input_bam_prefix}_additional.vcf.gz"
+            merged_vcf="${input_bam_prefix}_additional.vcf.gz"
+        fi
+
+        # Normalize VCF
+        bcftools norm "$merged_vcf" -f "$reference_fasta_name" -m -any --keep-sum AD -Oz -o "$norm_vcf"
+        tabix -p vcf "$norm_vcf"
     else
-        # Normalise VCF
-        bcftools norm "$output_vcf" -f "$reference_fasta_name" -m -any --keep-sum AD -Oz -o "$final_vcf"
+        echo "Error: No VCF files were generated." >&2
+        exit 1
     fi
 
-
-    # Merge with senteion VCF
-    # if [ -n "$senteion_vcf" ]; then
-    #     bcftools merge -m none -Oz -o merged.vcf.gz "$final_vcf" "$senteion_vcf"
-    #     final_vcf="${sample_name}_merged.vcf.gz"
-    # fi
+    # Merge with senteion VCF, TODO: add concat for sention VCF
+    # IF output_combined set as true
+    final_vcf="${sample_name}_additional_normalised_combined.vcf.gz"
+    if [ "$output_combined" = true ]; then
+        bcftools concat -a "$norm_vcf" "$senteion_vcf_name" -Oz -o "${final_vcf}"
+    else
+        echo "Skipping merging with senteion SNV VCF"
+        mv "$norm_vcf" "$final_vcf"
+    fi
 
     # Upload final VCF
     uploaded_vcf=$(dx upload "$final_vcf" --brief)
