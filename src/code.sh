@@ -1,16 +1,20 @@
 #!/bin/bash
-# TODO: Change to modular functions
+# This script processes a BAM file and a list of genomic regions to generate VCF files.
+# It uses bcftools to call variants and filters them based on a threshold.
+# It merges the generated VCFs with a provided Sentieon VCF and uploads the final result.
+
 
 download_inputs() {
     echo "Downloading input files..."
     dx-download-all-inputs --parallel
+    # Move files to the correct directory
+    find ~/in/ -type f -name "*" -print0 | xargs -0 -I {} mv {} /home/dnanexus
 }
 
 extract_sample_info() {
     # Extract filename and sample name
     input_bam_prefix="${input_bam_name%.bam}"  # Remove .bam extension
     sample_name="${input_bam_prefix%%_*}"      # Extract sample prefix
-    find ~/in/ -type f -name "*" -print0 | xargs -0 -I {} mv {} /home/dnanexus
 
     echo "Extracted Sample Name: $sample_name"
 }
@@ -34,12 +38,13 @@ generate_region_vcfs() {
             -r "$chromPos" -a FORMAT/AD,FORMAT/DP -Ou | \
         bcftools call -mv -Oz -o "$output_vcf"
 
+        bcftools view -i "REF=='$knownRef' && ALT=='$knownAlt'" -Oz -o "${output_vcf}_filtered.vcf.gz" "$output_vcf"
+        mv "${output_vcf}_filtered.vcf.gz" "$output_vcf"
         tabix -p vcf "$output_vcf"
 
         # Check if at least one variant in this region meets the threshold
         # The code checks if REF/ALT match what we expect (knownRef, knownAlt)
-        # and then calculates ratio = ALT/(REF+0.0001). If ratio >= threshold,
-        # keep (pass=true). Otherwise, ignore.
+        # and then calculates ratio = ALT/REF. If ratio >= threshold,
         pass=false
         while read -r chrom pos ref alt ad; do
             # Split AD
@@ -86,57 +91,77 @@ generate_region_vcfs() {
     done < "$region_list_name"
 }
 
-merge_normalize_vcfs() {
+merge_region_vcfs() {
+    # Merge all VCFs generated for additional regions into one file (merged_vcf).
     merged_vcf="${input_bam_prefix}_additional.vcf.gz"
-    norm_vcf="${input_bam_prefix}_additional_normalized.vcf.gz"
+
     if [ ${#output_vcfs[@]} -gt 0 ]; then
         if [ ${#output_vcfs[@]} -gt 1 ]; then
-            echo "Merging VCFs..."
+            echo "Merging multiple additional region VCFs..."
             bcftools concat "${output_vcfs[@]}" -Oz -o "$merged_vcf"
+            tabix -p vcf "$merged_vcf"
         else
-            # If only one VCF file, use it as final VCF
+            # Only one VCF, rename it as the merged output
             merged_vcf="${output_vcfs[0]}"
-            # Rename final VCF
             mv "$merged_vcf" "${input_bam_prefix}_additional.vcf.gz"
             merged_vcf="${input_bam_prefix}_additional.vcf.gz"
+            tabix -p vcf "$merged_vcf"
         fi
-
-        # Normalize VCF
-        bcftools norm "$merged_vcf" -f "$reference_fasta_name" -m -any --keep-sum AD -Oz -o "$norm_vcf"
-        tabix -p vcf "$norm_vcf"
     else
-        echo "Error: No VCF files were generated." >&2
-        exit 1
+        echo "No additional region VCF files were generated. Using sentieon VCF as final."
+        merged_vcf="$sentieon_vcf_name"
     fi
 }
 
-merge_with_senteion_vcf() {
-    # Merge with senteion VCF, TODO: add concat for sention VCF
-    # IF output_combined set as true
-    final_vcf="${sample_name}_additional_normalised_combined.vcf.gz"
-    if [ "$output_combined" = true ]; then
-        bcftools concat -a "$norm_vcf" "$senteion_vcf_name" -Oz -o "${final_vcf}"
-    else
-        echo "Skipping merging with senteion SNV VCF"
-        mv "$norm_vcf" "$final_vcf"
+merge_with_sentieon_vcf() {
+    # Conditionally merge the merged_vcf with the sentieon VCF if output_combined is true.
+
+    # If merged_vcf == sentieon_vcf_name, just reuse the original file
+    if [[ "$merged_vcf" == "$senteion_vcf_name" ]]; then
+        echo "No region VCFs were added; reusing Sentieon VCF as final."
+        final_vcf="$merged_vcf"
+        return
     fi
+
+    final_vcf="${sample_name}_additional_combined.vcf.gz"
+
+    if [ "$output_combined" = true ]; then
+        echo "Merging with sentieon VCF..."
+        bcftools concat -a "$merged_vcf" "$sentieon_vcf_name" -Oz -o "$final_vcf"
+    else
+        echo "Skipping merging with sentieon VCF."
+        final_vcf="$merged_vcf"
+    fi
+}
+
+normalize_vcf() {
+    # Normalize the final VCF using bcftools norm.
+    # The normalized file overwrites final_vcf to keep usage consistent.
+    local temp_norm_vcf="${final_vcf%.vcf.gz}_normalized.vcf.gz"
+
+    echo "Normalizing final VCF..."
+    bcftools norm "$final_vcf" -f "$reference_fasta_name" -m -any --keep-sum AD -Oz -o "$temp_norm_vcf"
+    tabix -p vcf "$temp_norm_vcf"
+
+    final_vcf="$temp_norm_vcf"
 }
 
 upload_final_vcf() {
-    # Upload final VCF
+    # Upload final VCF to DNAnexus, record output
     uploaded_vcf=$(dx upload "$final_vcf" --brief)
     dx-jobutil-add-output output_vcf "$uploaded_vcf" --class=file
 }
 
 main() {
-    set -exuo pipefail  # Strict mode to catch errors
+    set -exo pipefail  # Strict mode to catch errors
 
     download_inputs
     extract_sample_info
     check_region_list_exists
     generate_region_vcfs
-    merge_normalize_vcfs
-    merge_with_senteion_vcf
+    merge_region_vcfs
+    merge_with_sentieon_vcf
+    normalize_vcf
     upload_final_vcf
 }
 

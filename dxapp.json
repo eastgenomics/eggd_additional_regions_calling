@@ -46,20 +46,20 @@
       "help": "File containing genomic regions (one per line) or comma-separated list."
     },
     {
-      "name": "senteion_vcf",
+      "name": "sentieon_vcf",
       "class": "file",
       "optional": true,
-      "label": "Senteion HC VCF",
+      "label": "Sentieon HC VCF",
       "patterns": ["*.vcf.gz"],
-      "help": "Senteion variant calls to be merged. Must be indexed."
+      "help": "Sentieon variant calls to be merged. Must be indexed."
     },
     {
-      "name": "senteion_tbi",
+      "name": "sentieon_tbi",
       "class": "file",
       "optional": true,
-      "label": "Senteion VCF Index",
+      "label": "Sentieon VCF Index",
       "patterns": ["*.tbi"],
-      "help": "Index file for the Senteion HC VCF."
+      "help": "Index file for the Sentieon HC VCF."
     },
     {
       "name": "output_combined",
@@ -76,7 +76,7 @@
       "class": "file",
       "label": "Output VCF file",
       "patterns": ["*.vcf.gz"],
-      "help": "Final variant calls merged with Senteion HC VCF."
+      "help": "Final variant calls merged with Sentieon HC VCF."
     }
   ],
   "runSpec": {
