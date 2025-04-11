@@ -2,13 +2,21 @@
 # This script processes a BAM file and a list of genomic regions to generate VCF files.
 # It uses bcftools to call variants and filters them based on a threshold.
 # It merges the generated VCFs with a provided Sentieon VCF and uploads the final result.
-
+#TODO: change script to use tar of genome files.
+#TODO: testing with range of VCFs and multiple regions.
 
 download_inputs() {
     echo "Downloading input files..."
     dx-download-all-inputs --parallel
     # Move files to the correct directory
     find ~/in/ -type f -name "*" -print0 | xargs -0 -I {} mv {} /home/dnanexus
+}
+
+extract_reference() {
+    echo "Extracting reference archive..."
+    tar -I pigz -xf "$fasta_tar_name"
+    reference_fasta_name="genome.fa"
+    echo "Reference extracted to $reference_fasta_name"
 }
 
 extract_sample_info() {
@@ -55,18 +63,27 @@ generate_region_vcfs() {
             if [[ "$ref" == "$knownRef" && "$alt" == "$knownAlt" ]]; then
                 # Attempt ratio; if refCount=0, return an error line.
                 ratio=$(awk -v r="$refCount" -v a="$altCount" '
-                BEGIN {
-                  if (r == 0) {
-                    print "ERROR_DIV_ZERO"
-                    exit
-                  }
-                  print a/r
-                }')
+                  BEGIN {
+                    if (r == 0) {
+                      if (a == 0) {
+                        print "NA"     # No reads at all
+                      } else {
+                        print "INF"    # All reads are ALT
+                      }
+                    } else {
+                      print a / r      # Normal case
+                    }
+                  }')
 
                 # If AWK printed ERROR_DIV_ZERO, skip this variant or handle how you wish
-                if [[ "$ratio" == "ERROR_DIV_ZERO" ]]; then
-                    echo "Warning: Division by zero for $chrom:$pos. Skipping variant." >&2
+                if [[ "$ratio" == "NA" ]]; then
+                    echo "Warning: No reads at $chrom:$pos. Skipping variant." >&2
                     continue
+                fi
+
+                if [[ "$ratio" == "INF" ]]; then
+                    pass=true
+                    break
                 fi
                 # Check if ratio meets threshold
                 # Use awk to compare ratio and threshold

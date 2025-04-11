@@ -22,20 +22,12 @@
       "help": "Index file for the input BAM."
     },
     {
-      "name": "reference_fasta",
+      "name": "fasta_tar",
       "class": "file",
       "optional": false,
-      "label": "Reference Genome",
-      "patterns": ["*.fasta", "*.fa"],
-      "help": "Reference genome file in FASTA format. Must be indexed."
-    },
-    {
-      "name": "reference_fai",
-      "class": "file",
-      "optional": false,
-      "label": "FASTA Index file",
-      "patterns": ["*.fai"],
-      "help": "Index file for the reference genome."
+      "label": "Reference Genome tar input",
+      "patterns": ["*.tar.gz"],
+      "help": "Tar file containing the reference genome in FASTA format. Must be indexed."
     },
     {
       "name": "region_list",
