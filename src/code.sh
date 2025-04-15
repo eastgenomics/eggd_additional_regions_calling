@@ -2,8 +2,6 @@
 # This script processes a BAM file and a list of genomic regions to generate VCF files.
 # It uses bcftools to call variants and filters them based on a threshold.
 # It merges the generated VCFs with a provided Sentieon VCF and uploads the final result.
-#TODO: change script to use tar of genome files.
-#TODO: testing with range of VCFs and multiple regions.
 
 download_inputs() {
     echo "Downloading input files..."
@@ -21,8 +19,8 @@ extract_reference() {
 
 extract_sample_info() {
     # Extract filename and sample name
-    input_bam_prefix="${input_bam_name%.bam}"  # Remove .bam extension
-    sample_name="${input_bam_prefix%%_*}"      # Extract sample prefix
+    input_bam_prefix="${input_bam_name%.bam}" # Remove .bam extension
+    sample_name="${input_bam_prefix%%_*}"     # Extract sample prefix
 
     echo "Extracted Sample Name: $sample_name"
 }
@@ -44,9 +42,9 @@ check_if_variant_exists_already() {
     # Check if the variant is already called in the VCF
     if bcftools view -r "$chromPos" "$sentieon_vcf_name" | grep -q "$knownRef" && grep -q "$knownAlt"; then
         echo "Variant $chromPos with REF=$knownRef and ALT=$knownAlt already exists in the VCF."
-        return 0  # Variant exists
+        return 0 # Variant exists
     else
-        return 1  # Variant does not exist
+        return 1 # Variant does not exist
     fi
 }
 
@@ -67,8 +65,8 @@ generate_region_vcfs() {
         # Use -a to specify the format fields to include in the output
 
         bcftools mpileup -d 8000 -f "$reference_fasta_name" "$input_bam_name" \
-            -r "$chromPos" -a FORMAT/AD,FORMAT/DP -Ou | \
-        bcftools call -mv -Oz -o "$output_vcf"
+            -r "$chromPos" -a FORMAT/AD,FORMAT/DP -Ou |
+            bcftools call -mv -Oz -o "$output_vcf"
 
         bcftools view -i "REF=='$knownRef' && ALT=='$knownAlt'" -Oz -o "${output_vcf}_filtered.vcf.gz" "$output_vcf"
         mv "${output_vcf}_filtered.vcf.gz" "$output_vcf"
@@ -80,7 +78,7 @@ generate_region_vcfs() {
         pass=false
         while read -r chrom pos ref alt ad; do
             # Split AD
-            IFS=',' read -r refCount altCount <<< "$ad"
+            IFS=',' read -r refCount altCount <<<"$ad"
             refCount="${refCount:-0}"
             altCount="${altCount:-0}"
 
@@ -129,7 +127,7 @@ generate_region_vcfs() {
             rm -f "$output_vcf" "$output_vcf.tbi"
         fi
 
-    done < "$region_list_name"
+    done <"$region_list_name"
 }
 
 merge_region_vcfs() {
@@ -191,10 +189,16 @@ upload_final_vcf() {
     # Upload final VCF to DNAnexus, record output
     uploaded_vcf=$(dx upload "$final_vcf" --brief)
     dx-jobutil-add-output output_vcf "$uploaded_vcf" --class=file
+
+    # If merged_vcf differs from the original input VCF, upload it as an additional file
+    if [ "$merged_vcf" != "$sentieon_vcf_name" ]; then
+        uploaded_merged_vcf=$(dx upload "$merged_vcf" --brief)
+        dx-jobutil-add-output merged_additional_regions_vcf "$uploaded_merged_vcf" --class=file
+    fi
 }
 
 main() {
-    set -exo pipefail  # Strict mode to catch errors
+    set -exo pipefail # Strict mode to catch errors
 
     download_inputs
     extract_sample_info
