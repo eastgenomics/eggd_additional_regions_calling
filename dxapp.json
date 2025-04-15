@@ -23,11 +23,12 @@
     },
     {
       "name": "fasta_tar",
+      "label": "Reference genome fasta and index",
       "class": "file",
       "optional": false,
-      "label": "Reference Genome tar input",
-      "patterns": ["*.tar.gz"],
-      "help": "Tar file containing the reference genome in FASTA format. Must be indexed."
+      "group": "files",
+      "patterns": ["*.fasta-index.tar.gz"],
+      "help": "tar.gz containing genome.fa and genome.fa.fai. Must match reference genome build used."
     },
     {
       "name": "region_list",
@@ -69,6 +70,13 @@
       "label": "Output VCF file",
       "patterns": ["*.vcf.gz"],
       "help": "Final variant calls merged with Sentieon HC VCF."
+    },
+    {
+      "name": "merged_additional_regions_vcf",
+      "class": "file",
+      "label": "Merged Additional Regions VCF",
+      "patterns": ["*.vcf.gz"],
+      "help": "Merged VCF file for additional regions."
     }
   ],
   "runSpec": {
