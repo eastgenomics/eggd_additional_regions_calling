@@ -34,13 +34,37 @@ check_region_list_exists() {
     fi
 }
 
+check_if_variant_exists_already() {
+
+    # Check if the variant already exists in the VCF
+    local chromPos="$1"
+    local knownRef="$2"
+    local knownAlt="$3"
+
+    # Check if the variant is already called in the VCF
+    if bcftools view -r "$chromPos" "$sentieon_vcf_name" | grep -q "$knownRef" && grep -q "$knownAlt"; then
+        echo "Variant $chromPos with REF=$knownRef and ALT=$knownAlt already exists in the VCF."
+        return 0  # Variant exists
+    else
+        return 1  # Variant does not exist
+    fi
+}
 
 generate_region_vcfs() {
     output_vcfs=()
-    # Expect the region_list file to have lines: chromPos  REF  ALT  threshold
     while IFS=$'\t' read -r chromPos knownRef knownAlt thresh; do
         echo "Processing region: $chromPos with REF=$knownRef ALT=$knownAlt threshold=$thresh"
         output_vcf="output_${chromPos//:/_}.vcf.gz"
+
+        # Check if the variant already exists in the VCF
+        if check_if_variant_exists_already "$chromPos" "$knownRef" "$knownAlt"; then
+            echo "Skipping region $chromPos as it already exists in the VCF."
+            continue
+        fi
+
+        # Call variants using bcftools mpileup and filter based on the threshold
+        # Use the -Ou option to output uncompressed BCF format
+        # Use -a to specify the format fields to include in the output
 
         bcftools mpileup -d 8000 -f "$reference_fasta_name" "$input_bam_name" \
             -r "$chromPos" -a FORMAT/AD,FORMAT/DP -Ou | \
