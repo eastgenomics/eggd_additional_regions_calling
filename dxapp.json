@@ -45,14 +45,6 @@
       "label": "Sentieon HC VCF",
       "patterns": ["*.vcf.gz"],
       "help": "Sentieon variant calls to be merged. Must be indexed."
-    },
-    {
-      "name": "output_combined",
-      "class": "boolean",
-      "optional": true,
-      "default": true,
-      "label": "Combine output VCFs?",
-      "help": "If true, all VCFs will be merged into a single output file."
     }
   ],
   "outputSpec": [

@@ -167,8 +167,6 @@ _merge_region_vcfs() {
 _merge_with_sentieon_vcf() {
     mark-section "Merging regional VCF with Sentieon VCF"
 
-    # Conditionally merge the merged_vcf with the sentieon VCF if output_combined is true.
-
     # If merged_vcf == sentieon_vcf_name, just reuse the original file
     if [[ "$merged_vcf" == "$sentieon_vcf_name" ]]; then
         echo "No region VCFs were added; reusing Sentieon VCF as final."
@@ -177,14 +175,8 @@ _merge_with_sentieon_vcf() {
     fi
 
     final_vcf="${sample_name}_additional_combined.vcf.gz"
-
-    if [ "$output_combined" = true ]; then
-        echo "Merging with sentieon VCF..."
-        bcftools concat -a "$merged_vcf" "$sentieon_vcf_name" -Oz -o "$final_vcf"
-    else
-        echo "Skipping merging with sentieon VCF."
-        final_vcf="$merged_vcf"
-    fi
+    echo "Merging with sentieon VCF..."
+    bcftools concat -a "$merged_vcf" "$sentieon_vcf_name" -Oz -o "$final_vcf"
 }
 
 _normalize_vcf() {
