@@ -1,7 +1,7 @@
 {
   "name": "eggd_additional_regions_calling",
   "title": "eggd_additional_regions_calling",
-  "summary": "This app does additonal variant calling for set regions which have low coverage but known variants which require evaluation.",
+  "summary": "This app does variant calling for set regions with low coverage but known variants requiring evaluation",
   "dxapi": "1.0.0",
   "version": "0.1.0",
   "inputSpec": [
@@ -45,14 +45,6 @@
       "label": "Sentieon HC VCF",
       "patterns": ["*.vcf.gz"],
       "help": "Sentieon variant calls to be merged. Must be indexed."
-    },
-    {
-      "name": "sentieon_tbi",
-      "class": "file",
-      "optional": true,
-      "label": "Sentieon VCF Index",
-      "patterns": ["*.tbi"],
-      "help": "Index file for the Sentieon HC VCF."
     },
     {
       "name": "output_combined",
