@@ -1,37 +1,40 @@
-<!-- dx-header -->
 # eggd_additional_region_calling (DNAnexus Platform App)
 
 ## What does this app do?
-This app performs additional variant calling on genomic regions that typically have low coverage but contain known variants needing closer evaluation. It works alongside an existing Sentieon variant call set by generating separate region-based VCFs, filtering them on a user-defined threshold, and merging everything into a final VCF.
+
+This app calls variants on specified low-coverage genomic regions with known REF/ALT alleles and merges the results with an existing Sentieon VCF. It now also checks if a variant already exists in the Sentieon VCF to avoid duplicating calls. Finally, it normalizes and indexes the resulting VCF.
 
 ## What are typical use cases for this app?
-- Investigating low-coverage regions that are missed in a standard run to include known variants.
+
+- Investigating known low-coverage sites in a BAM file to confirm important known variants.
 
 ## What data are required for this app to run?
-- A BAM file to call from (input_bam)
-- A reference FASTA-index tar (fasta_tar)
-- A list of regions, each with an expected REF, ALT, and threshold (region_list)
-- A Sentieon VCF file (senteion_vcf) to merge final results with
+
+- A BAM file (input_bam) and its index (input_bai) for the region calls.
+- A reference FASTA tar (fasta_tar) that includes genome.fa and genome.fa.fai.
+- A region listing (region_list) specifying chrom:pos, REF, ALT, and threshold.
+- A Sentieon VCF (sentieon_vcf) for merging and duplicate-variant checks.
 
 ## What are the optional inputs for this app?
-- A boolean flag (output_combined) to specify whether to merge the new region calls with the Sentieon VCF. Defaults to true.
+
+- A boolean flag (output_combined) to merge these new region calls with the Sentieon VCF (defaults to true).
 
 ## How does the app work?
-1. Reads the region list, each line specifying chrom:pos, known REF, known ALT, and a threshold.
-2. Calls variants using bcftools mpileup/call on each region.
-3. Evaluates whether REF and ALT in the called variants match the known REF/ALT.
-4. Calculates the ratio of ALT to REF reads. If it meets or exceeds the threshold, the region passes.
-5. Merges all passing region VCFs.
-6. Optionally merges these with the Sentieon VCF.
-7. Normalizes and indexes the final VCF.
-8. Uploads the final VCF to the DNAnexus project.
+
+1. Reads each region, skipping any variants already found in the Sentieon VCF.
+2. Uses bcftools mpileup/call to generate VCF files for each region.
+3. Checks REF, ALT, and calculates an ALT-to-REF ratio to filter on a user-defined threshold.
+4. Merges passing variants into a single VCF.
+5. Optionally concatenates the merged file with the Sentieon VCF.
+6. Normalizes the final VCF and uploads it along with any additional region VCFs.
 
 ## What does this app output?
-- A final VCF (and index) containing the additional region calls that meet the defined threshold. When merging is enabled, it also includes variants from your Sentieon VCF.
-- The merged additional regions VCF is uploaded to the DNAnexus project.
+
+- A final normalized VCF (and index) containing all regions that exceeded the set threshold and any variants from the Sentieon VCF (if merging is enabled).
+- A merged additional_regions VCF (if new regions were identified).
 
 ## Notes
-- The script uses bcftools for variant calling, merging, and normalization.
-- Shell scripts in this repository handle tasks like error checking and skipping regions that fail.
 
-<!-- /dx-header -->
+- bcftools mpileup/call is used for variant calling on each region.
+- The script automatically indexes new and merged VCFs if indexes are missing.
+- No new call is made if the variant is already in the Sentieon VCF.
