@@ -60,7 +60,7 @@ _check_if_variant_exists_already() {
 _generate_region_vcfs() {
     mark-section "Regional calling with bcftools"
 
-    output_vcfs=()
+    output_vcfs_list=()
     while IFS=$'\t' read -r chromPos knownRef knownAlt thresh; do
         echo "Processing region: ${chromPos} with REF=${knownRef} ALT=${knownAlt} threshold=${thresh}"
         output_vcf="${sample_name}_${chromPos//:/}_${knownRef}_${knownAlt}.vcf.gz"
@@ -132,7 +132,7 @@ _generate_region_vcfs() {
         # If any variant in this region passes the threshold, add it to the list
         if [[ "$pass" == true ]]; then
             echo "Region $chromPos meets threshold; keeping VCF."
-            output_vcfs+=("$output_vcf")
+            output_vcfs_list+=("$output_vcf")
         else
             echo "Region $chromPos below threshold; ignoring VCF."
             rm -f "$output_vcf" "$output_vcf.tbi"
@@ -146,14 +146,14 @@ _merge_region_vcfs() {
     # Merge all VCFs generated for additional regions into one file (merged_vcf).
     merged_vcf="${input_bam_prefix}_additional.vcf.gz"
 
-    if [ ${#output_vcfs[@]} -gt 0 ]; then
-        if [ ${#output_vcfs[@]} -gt 1 ]; then
+    if [ ${#output_vcfs_list[@]} -gt 0 ]; then
+        if [ ${#output_vcfs_list[@]} -gt 1 ]; then
             echo "Merging multiple additional region VCFs..."
-            bcftools concat "${output_vcfs[@]}" -Oz -o "$merged_vcf"
+            bcftools concat "${output_vcfs_list[@]}" -Oz -o "$merged_vcf"
             _index_vcf_if_missing "$merged_vcf"
         else
             # Only one VCF, rename it as the merged output
-            merged_vcf="${output_vcfs[0]}"
+            merged_vcf="${output_vcfs_list[0]}"
             mv "$merged_vcf" "${input_bam_prefix}_additional.vcf.gz"
             merged_vcf="${input_bam_prefix}_additional.vcf.gz"
             _index_vcf_if_missing "$merged_vcf"
@@ -203,12 +203,9 @@ _upload_final_vcf() {
         uploaded_merged_vcf=$(dx upload "$merged_vcf" --brief)
         dx-jobutil-add-output merged_additional_regions_vcf "$uploaded_merged_vcf" --class=file
     else
-        # Create an empty VCF to satisfy DNAnexus requirements
-        echo -e "##fileformat=VCFv4.2\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO" > empty_merged.vcf
-        bgzip empty_merged.vcf
-
-        placeholder_vcf=$(dx upload empty_merged.vcf.gz --brief)
-        dx-jobutil-add-output merged_additional_regions_vcf "$placeholder_vcf" --class=file
+        # Print to say that no additional regions were added
+        echo "No additional regions were added to the VCF."
+        echo "The merged VCF is the same as the Sentieon VCF."
     fi
 }
 
