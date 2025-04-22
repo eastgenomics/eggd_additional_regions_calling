@@ -108,7 +108,7 @@ _generate_region_vcfs() {
                     }
                   }')
 
-                # If AWK printed ERROR_DIV_ZERO, skip this variant or handle how you wish
+                # If AWK printed NA, skip this variant or handle how you wish
                 if [[ "$ratio" == "NA" ]]; then
                     echo "Warning: No reads at $chrom:$pos. Skipping variant." >&2
                     continue
