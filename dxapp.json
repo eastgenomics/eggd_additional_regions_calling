@@ -56,11 +56,11 @@
       "help": "Final variant calls merged with Sentieon HC VCF."
     },
     {
-      "name": "merged_additional_regions_vcf",
+      "name": "output_vcf_index",
       "class": "file",
-      "label": "Merged Additional Regions VCF",
-      "patterns": ["*.vcf.gz"],
-      "help": "Merged VCF file for additional regions."
+      "label": "Output VCF index file",
+      "patterns": ["*.vcf.gz.tbi"],
+      "help": "Index file for the output VCF."
     }
   ],
   "runSpec": {
