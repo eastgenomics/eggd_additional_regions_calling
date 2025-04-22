@@ -174,7 +174,7 @@ _merge_with_sentieon_vcf() {
         return
     fi
 
-    final_vcf="${sample_name}_additional_combined.vcf.gz"
+    final_vcf="${sentieon_vcf_name}_additional.vcf.gz"
     echo "Merging with sentieon VCF..."
     bcftools concat -a "$merged_vcf" "$sentieon_vcf_name" -Oz -o "$final_vcf"
 }
