@@ -3,7 +3,7 @@
   "title": "eggd_additional_regions_calling",
   "summary": "This app does variant calling for set regions with low coverage but known variants requiring evaluation",
   "dxapi": "1.0.0",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "inputSpec": [
     {
       "name": "input_bam",
