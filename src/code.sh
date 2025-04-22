@@ -144,7 +144,7 @@ _generate_region_vcfs() {
 _merge_region_vcfs() {
     mark-section "Merging regional VCFs"
     # Merge all VCFs generated for additional regions into one file (merged_vcf).
-    merged_vcf="${input_bam_prefix}_additional.vcf.gz"
+    merged_vcf="${input_bam_prefix}_add_regions.vcf.gz"
 
     if [ ${#output_vcfs_list[@]} -gt 0 ]; then
         if [ ${#output_vcfs_list[@]} -gt 1 ]; then
@@ -154,8 +154,8 @@ _merge_region_vcfs() {
         else
             # Only one VCF, rename it as the merged output
             merged_vcf="${output_vcfs_list[0]}"
-            mv "$merged_vcf" "${input_bam_prefix}_additional.vcf.gz"
-            merged_vcf="${input_bam_prefix}_additional.vcf.gz"
+            mv "$merged_vcf" "${input_bam_prefix}_add_regions.vcf.gz"
+            merged_vcf="${input_bam_prefix}_add_regions.vcf.gz"
             _index_vcf_if_missing "$merged_vcf"
         fi
     else
@@ -170,11 +170,26 @@ _merge_with_sentieon_vcf() {
     # If merged_vcf == sentieon_vcf_name, just reuse the original file
     if [[ "$merged_vcf" == "$sentieon_vcf_name" ]]; then
         echo "No region VCFs were added; reusing Sentieon VCF as final."
+        echo "No additional variants were added."
+        mv "$sentieon_vcf_name" "${sentieon_vcf_name%.vcf.gz}_additional.vcf.gz"
+        # Rename the VCF to indicate it has been processed
+        merged_vcf="${sentieon_vcf_name%.vcf.gz}_additional.vcf.gz"
+        # Index the VCF if it doesn't exist
+        if [[ ! -f "${sentieon_vcf_name%.vcf.gz}_additional.vcf.gz.tbi" ]]; then
+            echo "Indexing Sentieon VCF..."
+            tabix -p vcf "${sentieon_vcf_name%.vcf.gz}_additional.vcf.gz"
+        fi
+        # Set final_vcf to the merged VCF
         final_vcf="$merged_vcf"
         return
+    else
+        echo "Merging regional VCF with Sentieon VCF..."
+        # Print the number of variants in the merged VCF
+        num_variants=$(bcftools view -H "$merged_vcf" | wc -l)
+        echo "Number of variants in merged VCF: $num_variants"
     fi
 
-    final_vcf="${sentieon_vcf_name}_additional.vcf.gz"
+    final_vcf="${sentieon_vcf_name%.vcf.gz}_additional.vcf.gz"
     echo "Merging with sentieon VCF..."
     bcftools concat -a "$merged_vcf" "$sentieon_vcf_name" -Oz -o "$final_vcf"
 }
@@ -197,16 +212,9 @@ _upload_final_vcf() {
     # Upload final VCF to DNAnexus, record output
     uploaded_vcf=$(dx upload "$final_vcf" --brief)
     dx-jobutil-add-output output_vcf "$uploaded_vcf" --class=file
-
-    # If merged_vcf differs from the original input VCF, upload it as an additional file
-    if [ "$merged_vcf" != "$sentieon_vcf_name" ] && [ -f "$merged_vcf" ]; then
-        uploaded_merged_vcf=$(dx upload "$merged_vcf" --brief)
-        dx-jobutil-add-output merged_additional_regions_vcf "$uploaded_merged_vcf" --class=file
-    else
-        # Print to say that no additional regions were added
-        echo "No additional regions were added to the VCF."
-        echo "The merged VCF is the same as the Sentieon VCF."
-    fi
+    # Upload index file
+    uploaded_vcf_index=$(dx upload "${final_vcf}.tbi" --brief)
+    dx-jobutil-add-output output_vcf_index "$uploaded_vcf_index" --class=file
 }
 
 main() {
