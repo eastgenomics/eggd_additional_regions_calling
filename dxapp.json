@@ -1,0 +1,101 @@
+{
+  "name": "eggd_additional_regions_calling",
+  "title": "eggd_additional_regions_calling",
+  "summary": "This app does variant calling for set regions with low coverage but known variants requiring evaluation",
+  "dxapi": "1.0.0",
+  "version": "1.0.0",
+  "inputSpec": [
+    {
+      "name": "input_bam",
+      "class": "file",
+      "optional": false,
+      "label": "Input BAM file",
+      "patterns": ["*.bam"],
+      "help": "Aligned sequencing data in BAM format. Must be indexed."
+    },
+    {
+      "name": "input_bai",
+      "class": "file",
+      "optional": false,
+      "label": "BAM Index file",
+      "patterns": ["*.bai"],
+      "help": "Index file for the input BAM."
+    },
+    {
+      "name": "fasta_tar",
+      "label": "Reference genome fasta and index",
+      "class": "file",
+      "optional": false,
+      "group": "files",
+      "patterns": ["*.fasta-index.tar.gz"],
+      "help": "tar.gz containing genome.fa and genome.fa.fai. Must match reference genome build used."
+    },
+    {
+      "name": "region_list",
+      "class": "file",
+      "optional": false,
+      "label": "Regions list",
+      "patterns": ["*.txt"],
+      "help": "File containing genomic regions (one per line) or comma-separated list."
+    },
+    {
+      "name": "sentieon_vcf",
+      "class": "file",
+      "optional": true,
+      "label": "Sentieon HC VCF",
+      "patterns": ["*.vcf.gz"],
+      "help": "Sentieon variant calls to be merged. Must be indexed."
+    }
+  ],
+  "outputSpec": [
+    {
+      "name": "output_vcf",
+      "class": "file",
+      "label": "Output VCF file",
+      "patterns": ["*.vcf.gz"],
+      "help": "Final variant calls merged with Sentieon HC VCF."
+    },
+    {
+      "name": "output_vcf_index",
+      "class": "file",
+      "label": "Output VCF index file",
+      "patterns": ["*.vcf.gz.tbi"],
+      "help": "Index file for the output VCF."
+    }
+  ],
+  "runSpec": {
+    "timeoutPolicy": {
+      "*": {
+        "hours": 2
+      }
+    },
+    "distribution": "Ubuntu",
+    "release": "20.04",
+    "version": "0",
+    "interpreter": "bash",
+    "file": "src/code.sh",
+    "assetDepends": [
+      {
+        "name": "htslib",
+        "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
+        "folder": "/app_assets/htslib/htslib_v1.15.0",
+        "version": "1.15.0"
+      }
+    ]
+  },
+  "developers": [
+    "org-emee_1"
+  ],
+  "authorizedUsers": [
+    "org-emee_1"
+  ],
+  "regionalOptions": {
+    "aws:eu-central-1": {
+      "systemRequirements": {
+        "*": {
+          "instanceType": "mem1_ssd1_v2_x2"
+        }
+      }
+    }
+  }
+}
