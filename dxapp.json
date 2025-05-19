@@ -51,7 +51,6 @@
       "class": "int",
       "optional": true,
       "label": "Threshold to define read depth thresholds",
-      "default": 20,
       "help": ""
     }
   ],
