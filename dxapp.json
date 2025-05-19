@@ -45,6 +45,14 @@
       "label": "Sentieon HC VCF",
       "patterns": ["*.vcf.gz"],
       "help": "Sentieon variant calls to be merged. Must be indexed."
+    },
+    {
+      "name": "read_depth_threshold",
+      "class": "int",
+      "optional": true,
+      "label": "Threshold to define read depth thresholds",
+      "default": 20,
+      "help": ""
     }
   ],
   "outputSpec": [
