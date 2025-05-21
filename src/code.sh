@@ -91,12 +91,11 @@ _generate_region_vcfs() {
         while read -r chrom pos ref alt ad dp; do
             # Split AD
             IFS=',' read -r refCount altCount <<< "$ad"
-            refCount="${refCount:-0}"
             altCount="${altCount:-0}"
             dp="${dp:-0}"
 
             if [[ "$ref" == "$knownRef" && "$alt" == "$knownAlt" ]]; then
-                # Attempt ratio; if refCount=0, return an error line.
+                # Attempt ratio; if depth=0, return an error line.
                 ratio=$(awk -v a="$altCount" -v d="$dp" '
                   BEGIN {
                     if (d == 0) {
