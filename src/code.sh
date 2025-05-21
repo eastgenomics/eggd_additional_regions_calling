@@ -97,7 +97,7 @@ _generate_region_vcfs() {
 
             if [[ "$ref" == "$knownRef" && "$alt" == "$knownAlt" ]]; then
                 # Attempt ratio; if refCount=0, return an error line.
-                ratio=$(awk -v r="$refCount" -v d="$dp" '
+                ratio=$(awk -v a="$altCount" -v d="$dp" '
                   BEGIN {
                     if (d == 0) {
                       if (a == 0) {
