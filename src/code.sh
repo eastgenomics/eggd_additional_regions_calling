@@ -77,7 +77,8 @@ _generate_region_vcfs() {
 
         bcftools mpileup -d 8000 -f "$reference_fasta_name" "$input_bam_name" \
             -r "$chromPos" -a FORMAT/AD,FORMAT/DP -Ou | \
-            bcftools call -mv -Oz -o "$output_vcf"
+            bcftools call -mv -Ou | \
+            bcftools norm -f "$reference_fasta_name" -Oz -o "$output_bcf"
 
         # Apply fitering to output VCF by minimum read depth
         bcftools view -i "REF=='${knownRef}' && ALT=='${knownAlt}' && FORMAT/DP>${minimum_read_depth}" -Oz -o "${output_vcf}_filtered.vcf.gz" "$output_vcf"
