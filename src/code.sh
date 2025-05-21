@@ -74,6 +74,7 @@ _generate_region_vcfs() {
         # Call variants using bcftools mpileup and filter based on the threshold
         # Use the -Ou option to output uncompressed BCF format
         # Use -a to specify the format fields to include in the output
+        # Use bcftools norm to handle alt/alt cases
 
         bcftools mpileup -d 8000 -f "$reference_fasta_name" "$input_bam_name" \
             -r "$chromPos" -a FORMAT/AD,FORMAT/DP -Ou | \
