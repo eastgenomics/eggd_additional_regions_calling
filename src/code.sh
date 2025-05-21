@@ -79,7 +79,8 @@ _generate_region_vcfs() {
             -r "$chromPos" -a FORMAT/AD,FORMAT/DP -Ou | \
             bcftools call -mv -Oz -o "$output_vcf"
 
-        bcftools view -i "REF=='${knownRef}' && ALT=='${knownAlt}'" -Oz -o "${output_vcf}_filtered.vcf.gz" "$output_vcf"
+        # Apply fitering to output VCF by minimum read depth
+        bcftools view -i "REF=='${knownRef}' && ALT=='${knownAlt}' && FORMAT/DP>${minimum_read_depth}" -Oz -o "${output_vcf}_filtered.vcf.gz" "$output_vcf"
         mv "${output_vcf}_filtered.vcf.gz" "$output_vcf"
         _index_vcf_if_missing "$output_vcf"
 
