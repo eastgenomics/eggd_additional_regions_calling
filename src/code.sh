@@ -88,24 +88,24 @@ _generate_region_vcfs() {
         # The code checks if REF/ALT match what we expect (knownRef, knownAlt)
         # and then calculates ratio = ALT/REF. If ratio >= threshold,
         pass=false
-        while read -r chrom pos ref alt ad; do
+        while read -r chrom pos ref alt ad dp; do
             # Split AD
             IFS=',' read -r refCount altCount <<< "$ad"
-            refCount="${refCount:-0}"
             altCount="${altCount:-0}"
+            dp="${dp:-0}"
 
             if [[ "$ref" == "$knownRef" && "$alt" == "$knownAlt" ]]; then
-                # Attempt ratio; if refCount=0, return an error line.
-                ratio=$(awk -v r="$refCount" -v a="$altCount" '
+                # Attempt ratio; if depth=0, return an error line.
+                ratio=$(awk -v a="$altCount" -v d="$dp" '
                   BEGIN {
-                    if (r == 0) {
+                    if (d == 0) {
                       if (a == 0) {
                         print "NA"     # No reads at all
                       } else {
-                        print "INF"    # All reads are ALT
+                        print "INF"    # Reads present for ALT but DP has 0 reads
                       }
                     } else {
-                      print a / r      # Normal case
+                      print a / d      # Normal case for alt/dp
                     }
                   }')
 
@@ -128,7 +128,7 @@ _generate_region_vcfs() {
                     break
                 fi
             fi
-        done < <(bcftools query -f '%CHROM\t%POS\t%REF\t%ALT\t[%AD]\n' "$output_vcf")
+        done < <(bcftools query -f '%CHROM\t%POS\t%REF\t%ALT\t[%AD]\t[%DP]\n' "$output_vcf")
 
         # If any variant in this region passes the threshold, add it to the list
         if [[ "$pass" == true ]]; then
