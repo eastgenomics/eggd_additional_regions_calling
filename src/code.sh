@@ -83,6 +83,7 @@ _generate_region_vcfs() {
         bcftools norm "$temp_vcf" -f "$reference_fasta_name" -m -any -Oz -o "$output_vcf"
 
         # Apply fitering to output VCF by minimum read depth
+        temp_vcf="${sample_name}_${chromPos//:/}_${knownRef}_${knownAlt}.tmp.vcf.gz"
         bcftools view -i "REF=='${knownRef}' && ALT=='${knownAlt}' && FORMAT/DP>${minimum_read_depth}" -Oz -o "${output_vcf}_filtered.vcf.gz" "$output_vcf"
         mv "${output_vcf}_filtered.vcf.gz" "$output_vcf"
         _index_vcf_if_missing "$output_vcf"
