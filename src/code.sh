@@ -203,13 +203,15 @@ _merge_with_sentieon_vcf() {
 _normalize_vcf() {
     # Normalize the final VCF using bcftools norm.
     # The normalized file overwrites final_vcf to keep usage consistent.
-    local temp_norm_vcf="${final_vcf%.vcf.gz}_normalized.vcf.gz"
+    if [[ "$opt_normalisation" ]]; then
+        local temp_norm_vcf="${final_vcf%.vcf.gz}_normalized.vcf.gz"
 
-    echo "Normalizing final VCF..."
-    bcftools norm "$final_vcf" -f "$reference_fasta_name" -m -any --keep-sum AD -Oz -o "$temp_norm_vcf"
-    tabix -p vcf "$temp_norm_vcf"
+        echo "Normalizing final VCF..."
+        bcftools norm "$final_vcf" -f "$reference_fasta_name" -m -any --keep-sum AD -Oz -o "$temp_norm_vcf"
+        tabix -p vcf "$temp_norm_vcf"
 
-    final_vcf="$temp_norm_vcf"
+        final_vcf="$temp_norm_vcf"
+    fi
 }
 
 _upload_final_vcf() {
