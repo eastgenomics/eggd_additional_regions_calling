@@ -74,10 +74,15 @@ _generate_region_vcfs() {
         # Call variants using bcftools mpileup and filter based on the threshold
         # Use the -Ou option to output uncompressed BCF format
         # Use -a to specify the format fields to include in the output
+        # Create temp for before normalising VCF file
+        # Use bcftools norm to handle alt/alt cases
+        temp_vcf="${sample_name}_${chromPos//:/}_${knownRef}_${knownAlt}.tmp.vcf.gz"
 
         bcftools mpileup -d 8000 -f "$reference_fasta_name" "$input_bam_name" \
             -r "$chromPos" -a FORMAT/AD,FORMAT/DP -Ou | \
-            bcftools call -mv -Oz -o "$output_vcf"
+            bcftools call -mv -Oz -o "$temp_vcf"
+        # Use bcftools norm to handle alt/alt cases
+        bcftools norm "$temp_vcf" -f "$reference_fasta_name" -m -any -Oz -o "$output_vcf"
 
         # Apply fitering to output VCF by minimum read depth
         bcftools view -i "REF=='${knownRef}' && ALT=='${knownAlt}' && FORMAT/DP>${minimum_read_depth}" -Oz -o "${output_vcf}_filtered.vcf.gz" "$output_vcf"
