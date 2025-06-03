@@ -203,7 +203,7 @@ _merge_with_sentieon_vcf() {
 _normalize_vcf() {
     # Normalize the final VCF using bcftools norm.
     # The normalized file overwrites final_vcf to keep usage consistent.
-    if [[ "$opt_normalisation" ]]; then
+    if [[ "$opt_normalisation" == "true" ]]; then
         local temp_norm_vcf="${final_vcf%.vcf.gz}_normalized.vcf.gz"
 
         echo "Normalizing final VCF..."
