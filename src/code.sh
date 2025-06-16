@@ -242,6 +242,7 @@ main() {
     _extract_reference
     _check_region_list_exists
     _index_vcf_if_missing "$sentieon_vcf_name"
+    _normalize_sentieon_vcf
     _generate_region_vcfs
     _merge_region_vcfs
     _merge_with_sentieon_vcf
