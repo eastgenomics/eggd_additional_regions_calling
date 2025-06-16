@@ -42,6 +42,18 @@ _index_vcf_if_missing() {
     fi
 }
 
+_normalize_sentieon_vcf() {
+   # Normalize the sentieon VCF using bcftools norm before generating regions VCF.
+   # bcftools norm used to handle alt/alt cases
+
+   temp_vcf="${sentieon_vcf_name}.tmp.vcf.gz"
+   bcftools norm "$sentieon_vcf_name" -f "$reference_fasta_name" -m -any --keep-sum AD -Oz -o "$temp_vcf"
+   tabix -p vcf "$temp_vcf"
+
+   # Update sentieon_vcf_name to use normalised VCF
+   sentieon_vcf_name="$temp_vcf"
+}
+
 _check_if_variant_exists_already() {
     local chromPos="$1"
     local knownRef="$2"
@@ -76,13 +88,10 @@ _generate_region_vcfs() {
         # Use -a to specify the format fields to include in the output
         # Create temp for before normalising VCF file
         # Use bcftools norm to handle alt/alt cases
-        temp_vcf="${sample_name}_${chromPos//:/}_${knownRef}_${knownAlt}.tmp.vcf.gz"
 
         bcftools mpileup -d 8000 -f "$reference_fasta_name" "$input_bam_name" \
             -r "$chromPos" -a FORMAT/AD,FORMAT/DP -Ou | \
-            bcftools call -mv -Oz -o "$temp_vcf"
-        # Use bcftools norm to handle alt/alt cases
-        bcftools norm "$temp_vcf" -f "$reference_fasta_name" -m -any -Oz -o "$output_vcf"
+            bcftools call -mv -Oz -o "$output_vcf"
 
         # Apply fitering to output VCF by minimum read depth
         bcftools view -i "REF=='${knownRef}' && ALT=='${knownAlt}' && FORMAT/DP>${minimum_read_depth}" -Oz -o "${output_vcf}_filtered.vcf.gz" "$output_vcf"
