@@ -221,6 +221,8 @@ _normalize_vcf() {
 
         final_vcf="$temp_norm_vcf"
     fi
+    # Ensure the final VCF is indexed whether normalised or not
+    tabix -p vcf "$final_vcf"
 }
 
 _upload_final_vcf() {
