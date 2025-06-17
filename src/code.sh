@@ -88,10 +88,13 @@ _generate_region_vcfs() {
         # Use -a to specify the format fields to include in the output
         # Create temp for before normalising VCF file
         # Use bcftools norm to handle alt/alt cases
+        temp_vcf="${sample_name}_${chromPos//:/}_${knownRef}_${knownAlt}.tmp.vcf.gz"
 
         bcftools mpileup -d 8000 -f "$reference_fasta_name" "$input_bam_name" \
             -r "$chromPos" -a FORMAT/AD,FORMAT/DP -Ou | \
-            bcftools call -mv -Oz -o "$output_vcf"
+            bcftools call -mv -Oz -o "$temp_vcf"
+        # Use bcftools norm to handle alt/alt cases
+        bcftools norm "$temp_vcf" -f "$reference_fasta_name" -m -any -Oz -o "$output_vcf"
 
         # Apply fitering to output VCF by minimum read depth
         bcftools view -i "REF=='${knownRef}' && ALT=='${knownAlt}' && FORMAT/DP>${minimum_read_depth}" -Oz -o "${output_vcf}_filtered.vcf.gz" "$output_vcf"
@@ -209,22 +212,6 @@ _merge_with_sentieon_vcf() {
     bcftools concat -a "$merged_vcf" "$sentieon_vcf_name" -Oz -o "$final_vcf"
 }
 
-_normalize_vcf() {
-    # Normalize the final VCF using bcftools norm.
-    # The normalized file overwrites final_vcf to keep usage consistent.
-    if [[ "$opt_normalisation" == "true" ]]; then
-        local temp_norm_vcf="${final_vcf%.vcf.gz}_normalized.vcf.gz"
-
-        echo "Normalizing final VCF..."
-        bcftools norm "$final_vcf" -f "$reference_fasta_name" -m -any --keep-sum AD -Oz -o "$temp_norm_vcf"
-        tabix -p vcf "$temp_norm_vcf"
-
-        final_vcf="$temp_norm_vcf"
-    fi
-    # Ensure the final VCF is indexed whether normalised or not
-    tabix -p vcf "$final_vcf"
-}
-
 _upload_final_vcf() {
     mark-section "Uploading outputs"
 
@@ -248,7 +235,6 @@ main() {
     _generate_region_vcfs
     _merge_region_vcfs
     _merge_with_sentieon_vcf
-    _normalize_vcf
     _upload_final_vcf
     echo "Done!"
     mark-success
