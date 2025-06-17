@@ -52,13 +52,6 @@
       "optional": true,
       "label": "Threshold to define read depth and only call variants if exceeds minimum threshold",
       "help": ""
-    },
-    {
-      "name": "opt_normalisation",
-      "label": "opt_normalisation",
-      "help": "Optional setting to perform Normalisation the final VCF using bcftools norm",
-      "class": "boolean",
-      "optional": true
     }
   ],
   "outputSpec": [
