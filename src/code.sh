@@ -42,6 +42,18 @@ _index_vcf_if_missing() {
     fi
 }
 
+_normalize_sentieon_vcf() {
+   # Normalize the sentieon VCF using bcftools norm before generating regions VCF.
+   # bcftools norm used to handle alt/alt cases
+
+   temp_vcf="${sentieon_vcf_name}.tmp.vcf.gz"
+   bcftools norm "$sentieon_vcf_name" -f "$reference_fasta_name" -m -any --keep-sum AD -Oz -o "$temp_vcf"
+   tabix -p vcf "$temp_vcf"
+
+   # Update sentieon_vcf_name to use normalised VCF
+   sentieon_vcf_name="$temp_vcf"
+}
+
 _check_if_variant_exists_already() {
     local chromPos="$1"
     local knownRef="$2"
@@ -200,18 +212,6 @@ _merge_with_sentieon_vcf() {
     bcftools concat -a "$merged_vcf" "$sentieon_vcf_name" -Oz -o "$final_vcf"
 }
 
-_normalize_vcf() {
-    # Normalize the final VCF using bcftools norm.
-    # The normalized file overwrites final_vcf to keep usage consistent.
-    local temp_norm_vcf="${final_vcf%.vcf.gz}_normalized.vcf.gz"
-
-    echo "Normalizing final VCF..."
-    bcftools norm "$final_vcf" -f "$reference_fasta_name" -m -any --keep-sum AD -Oz -o "$temp_norm_vcf"
-    tabix -p vcf "$temp_norm_vcf"
-
-    final_vcf="$temp_norm_vcf"
-}
-
 _upload_final_vcf() {
     mark-section "Uploading outputs"
 
@@ -231,10 +231,10 @@ main() {
     _extract_reference
     _check_region_list_exists
     _index_vcf_if_missing "$sentieon_vcf_name"
+    _normalize_sentieon_vcf
     _generate_region_vcfs
     _merge_region_vcfs
     _merge_with_sentieon_vcf
-    _normalize_vcf
     _upload_final_vcf
     echo "Done!"
     mark-success
