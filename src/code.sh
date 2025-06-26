@@ -226,9 +226,6 @@ _upload_final_vcf() {
 main() {
     set -exo pipefail # Strict mode to catch errors
 
-    # Assign default value if not given
-    : "${minimum_read_depth:=0}"
-
     _download_inputs
     _extract_sample_info
     _extract_reference
