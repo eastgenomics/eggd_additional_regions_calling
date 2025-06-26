@@ -29,7 +29,7 @@ _extract_sample_info() {
 
     echo "Extracted Sample Name: $sample_name"
     # Define final_VCF early
-    final_vcf="${original_basename}_additional.vcf.gz"
+    final_vcf="${original_basename}_additional_regions.vcf.gz"
 }
 
 _check_region_list_exists() {
