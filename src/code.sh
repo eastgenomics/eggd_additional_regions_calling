@@ -24,7 +24,12 @@ _extract_sample_info() {
     input_bam_prefix="${input_bam_name%.bam}" # Remove .bam extension
     sample_name="${input_bam_prefix%%_*}"     # Extract sample prefix
 
+    # Get basename of input BAM file
+    original_basename="${input_bam_prefix}"
+
     echo "Extracted Sample Name: $sample_name"
+    # Define final_VCF early
+    final_vcf="${original_basename}_additional.vcf.gz"
 }
 
 _check_region_list_exists() {
@@ -189,16 +194,12 @@ _merge_with_sentieon_vcf() {
     if [[ "$merged_vcf" == "$sentieon_vcf_name" ]]; then
         echo "No region VCFs were added; reusing Sentieon VCF as final."
         echo "No additional variants were added."
-        mv "$sentieon_vcf_name" "${sentieon_vcf_name%.vcf.gz}_additional.vcf.gz"
-        # Rename the VCF to indicate it has been processed
-        merged_vcf="${sentieon_vcf_name%.vcf.gz}_additional.vcf.gz"
-        # Index the VCF if it doesn't exist
-        if [[ ! -f "${sentieon_vcf_name%.vcf.gz}_additional.vcf.gz.tbi" ]]; then
-            echo "Indexing Sentieon VCF..."
-            tabix -p vcf "${sentieon_vcf_name%.vcf.gz}_additional.vcf.gz"
+       mv "$sentieon_vcf_name" "$final_vcf"
+       # Index the VCF if it doesn't exist
+       if [[ ! -f "${final_vcf}.tbi" ]]; then
+           echo "Indexing Sentieon VCF..."
+           tabix -p vcf "$final_vcf"
         fi
-        # Set final_vcf to the merged VCF
-        final_vcf="$merged_vcf"
         return
     else
         echo "Merging regional VCF with Sentieon VCF..."
@@ -206,11 +207,10 @@ _merge_with_sentieon_vcf() {
         num_variants=$(bcftools view -H "$merged_vcf" | wc -l)
         echo "Number of variants in merged VCF: $num_variants"
     fi
-
-    final_vcf="${sentieon_vcf_name%.vcf.gz}_additional.vcf.gz"
+    # Merge the regional VCF with the Sentieon VCF
     echo "Merging with sentieon VCF..."
     bcftools concat -a "$merged_vcf" "$sentieon_vcf_name" -Oz -o "$final_vcf"
-    tabix -p vcf "${sentieon_vcf_name%.vcf.gz}_additional.vcf.gz"
+    tabix -p vcf "$final_vcf"
 }
 
 _upload_final_vcf() {
