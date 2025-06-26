@@ -42,6 +42,18 @@ _index_vcf_if_missing() {
     fi
 }
 
+_normalize_sentieon_vcf() {
+   # Normalize the sentieon VCF using bcftools norm before generating regions VCF.
+   # bcftools norm used to handle alt/alt cases
+
+   temp_vcf="${sentieon_vcf_name}.tmp.vcf.gz"
+   bcftools norm "$sentieon_vcf_name" -f "$reference_fasta_name" -m -any --keep-sum AD -Oz -o "$temp_vcf"
+   tabix -p vcf "$temp_vcf"
+
+   # Update sentieon_vcf_name to use normalised VCF
+   sentieon_vcf_name="$temp_vcf"
+}
+
 _check_if_variant_exists_already() {
     local chromPos="$1"
     local knownRef="$2"
@@ -74,12 +86,18 @@ _generate_region_vcfs() {
         # Call variants using bcftools mpileup and filter based on the threshold
         # Use the -Ou option to output uncompressed BCF format
         # Use -a to specify the format fields to include in the output
+        # Create temp for before normalising VCF file
+        # Use bcftools norm to handle alt/alt cases
+        temp_vcf="${sample_name}_${chromPos//:/}_${knownRef}_${knownAlt}.tmp.vcf.gz"
 
         bcftools mpileup -d 8000 -f "$reference_fasta_name" "$input_bam_name" \
             -r "$chromPos" -a FORMAT/AD,FORMAT/DP -Ou | \
-            bcftools call -mv -Oz -o "$output_vcf"
+            bcftools call -mv -Oz -o "$temp_vcf"
+        # Use bcftools norm to handle alt/alt cases
+        bcftools norm "$temp_vcf" -f "$reference_fasta_name" -m -any -Oz -o "$output_vcf"
 
-        bcftools view -i "REF=='${knownRef}' && ALT=='${knownAlt}'" -Oz -o "${output_vcf}_filtered.vcf.gz" "$output_vcf"
+        # Apply fitering to output VCF by minimum read depth
+        bcftools view -i "REF=='${knownRef}' && ALT=='${knownAlt}' && FORMAT/DP>=${minimum_read_depth}" -Oz -o "${output_vcf}_filtered.vcf.gz" "$output_vcf"
         mv "${output_vcf}_filtered.vcf.gz" "$output_vcf"
         _index_vcf_if_missing "$output_vcf"
 
@@ -87,24 +105,24 @@ _generate_region_vcfs() {
         # The code checks if REF/ALT match what we expect (knownRef, knownAlt)
         # and then calculates ratio = ALT/REF. If ratio >= threshold,
         pass=false
-        while read -r chrom pos ref alt ad; do
+        while read -r chrom pos ref alt ad dp; do
             # Split AD
             IFS=',' read -r refCount altCount <<< "$ad"
-            refCount="${refCount:-0}"
             altCount="${altCount:-0}"
+            dp="${dp:-0}"
 
             if [[ "$ref" == "$knownRef" && "$alt" == "$knownAlt" ]]; then
-                # Attempt ratio; if refCount=0, return an error line.
-                ratio=$(awk -v r="$refCount" -v a="$altCount" '
+                # Attempt ratio; if depth=0, return an error line.
+                ratio=$(awk -v a="$altCount" -v d="$dp" '
                   BEGIN {
-                    if (r == 0) {
+                    if (d == 0) {
                       if (a == 0) {
                         print "NA"     # No reads at all
                       } else {
-                        print "INF"    # All reads are ALT
+                        print "INF"    # Reads present for ALT but DP has 0 reads
                       }
                     } else {
-                      print a / r      # Normal case
+                      print a / d      # Normal case for alt/dp
                     }
                   }')
 
@@ -127,7 +145,7 @@ _generate_region_vcfs() {
                     break
                 fi
             fi
-        done < <(bcftools query -f '%CHROM\t%POS\t%REF\t%ALT\t[%AD]\n' "$output_vcf")
+        done < <(bcftools query -f '%CHROM\t%POS\t%REF\t%ALT\t[%AD]\t[%DP]\n' "$output_vcf")
 
         # If any variant in this region passes the threshold, add it to the list
         if [[ "$pass" == true ]]; then
@@ -194,18 +212,6 @@ _merge_with_sentieon_vcf() {
     bcftools concat -a "$merged_vcf" "$sentieon_vcf_name" -Oz -o "$final_vcf"
 }
 
-_normalize_vcf() {
-    # Normalize the final VCF using bcftools norm.
-    # The normalized file overwrites final_vcf to keep usage consistent.
-    local temp_norm_vcf="${final_vcf%.vcf.gz}_normalized.vcf.gz"
-
-    echo "Normalizing final VCF..."
-    bcftools norm "$final_vcf" -f "$reference_fasta_name" -m -any --keep-sum AD -Oz -o "$temp_norm_vcf"
-    tabix -p vcf "$temp_norm_vcf"
-
-    final_vcf="$temp_norm_vcf"
-}
-
 _upload_final_vcf() {
     mark-section "Uploading outputs"
 
@@ -225,10 +231,10 @@ main() {
     _extract_reference
     _check_region_list_exists
     _index_vcf_if_missing "$sentieon_vcf_name"
+    _normalize_sentieon_vcf
     _generate_region_vcfs
     _merge_region_vcfs
     _merge_with_sentieon_vcf
-    _normalize_vcf
     _upload_final_vcf
     echo "Done!"
     mark-success
