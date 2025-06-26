@@ -49,7 +49,7 @@
     {
       "name": "minimum_read_depth",
       "class": "int",
-      "optional": true,
+      "optional": false,
       "default": 0,
       "label": "Minimum read depth threshold",
       "help": "Threshold to define read depth and only call variants if is equal to or exceeds minimum threshold"
