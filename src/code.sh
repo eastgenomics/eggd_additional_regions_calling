@@ -28,7 +28,7 @@ _extract_sample_info() {
     original_basename="${input_bam_prefix}"
 
     echo "Extracted Sample Name: $sample_name"
-    # Define final_VCF early
+    # Define final_vcf early
     final_vcf="${original_basename}_additional_regions.vcf.gz"
 }
 
