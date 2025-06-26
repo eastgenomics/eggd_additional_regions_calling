@@ -210,6 +210,7 @@ _merge_with_sentieon_vcf() {
     final_vcf="${sentieon_vcf_name%.vcf.gz}_additional.vcf.gz"
     echo "Merging with sentieon VCF..."
     bcftools concat -a "$merged_vcf" "$sentieon_vcf_name" -Oz -o "$final_vcf"
+    tabix -p vcf "${sentieon_vcf_name%.vcf.gz}_additional.vcf.gz"
 }
 
 _upload_final_vcf() {
