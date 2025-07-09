@@ -79,9 +79,7 @@
     },
     "assetDepends": [
       {
-          "id": "record-J1YBvy049yKpP7kk1j4ggqxZ"
-      },
-      {
+          "id": "record-J1YBvy049yKpP7kk1j4ggqxZ",
           "name": "htslib_suite_asset",
           "version": "1.22",
           "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
