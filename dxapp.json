@@ -84,7 +84,7 @@
     "file": "src/code.sh",
     "assetDepends": [
       {
-        "name": "htslib",
+        "name": "htslib_suite_asset",
         "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
         "folder": "/app_assets/htslib/htslib_v1.22.0",
         "version": "1.22.0"
