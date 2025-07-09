@@ -77,19 +77,22 @@
         "hours": 2
       }
     },
-    "distribution": "Ubuntu",
-    "release": "20.04",
-    "version": "0",
-    "interpreter": "bash",
-    "file": "src/code.sh",
     "assetDepends": [
       {
-        "name": "htslib_suite_asset",
-        "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-        "folder": "/app_assets/htslib/htslib_v1.22.0",
-        "version": "1.22"
+          "id": "record-J1YBvy049yKpP7kk1j4ggqxZ"
+      },
+      {
+          "name": "htslib_suite_asset",
+          "version": "1.22",
+          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
+          "folder": "/app_assets/htslib/htslib_v1.22.0"
       }
-    ]
+    ],
+    "interpreter": "bash",
+    "file": "src/code.sh",
+    "distribution": "Ubuntu",
+    "release": "20.04",
+    "version": "0"
   },
   "developers": [
     "org-emee_1"
